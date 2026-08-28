@@ -1,6 +1,6 @@
 {
-  "name": "Empire Marine AI",
-  "short_name": "Marine AI",
+  "name": "MARIVO",
+  "short_name": "MARIVO",
   "description": "Your intelligent marine assistant by Aetos Systems.",
   "start_url": "/",
   "display": "standalone",

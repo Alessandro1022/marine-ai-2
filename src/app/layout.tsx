@@ -22,7 +22,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Empire Marine AI",
+  title: "MARIVO",
   description:
     "Your intelligent marine assistant — weather, routes, fuel, maintenance and AI guidance for boaters.",
   manifest: "/manifest.json",

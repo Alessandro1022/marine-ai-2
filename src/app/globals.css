@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-abyss text-foam font-body antialiased;
+  background-image: radial-gradient(
+      120% 90% at 50% 0%,
+      #11283a 0%,
+      #0b1a26 45%,
+      #060d14 100%
+    );
+  background-attachment: fixed;
+}
+
+@layer components {
+  /* Glassmorphism card */
+  .glass-card {
+    @apply rounded-card border border-white/10 bg-hull/60 shadow-glass backdrop-blur-xl;
+    background-image: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.015) 40%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  }
+
+  /* Chartplotter-style data readout (the app's signature) */
+  .instrument {
+    @apply font-instrument tabular-nums tracking-tight text-foam;
+  }
+  .instrument-label {
+    @apply font-instrument text-[0.65rem] uppercase tracking-[0.18em] text-mist;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-sonar px-6 py-3
+      font-display text-sm font-semibold uppercase tracking-wider text-abyss
+      transition-transform active:scale-[0.97] disabled:opacity-40;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/15
+      px-6 py-3 font-display text-sm font-semibold uppercase tracking-wider text-foam
+      transition-colors active:bg-white/5 disabled:opacity-40;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-white/10 bg-deep/80 px-4 py-3 text-foam
+      placeholder:text-mist/60 outline-none transition-colors
+      focus:border-sonar/60 focus:ring-2 focus:ring-sonar/20;
+  }
+
+  .risk-dot {
+    @apply inline-block h-2.5 w-2.5 rounded-full;
+  }
+  .risk-dot-green {
+    @apply risk-dot bg-risk-green shadow-[0_0_10px_rgba(52,211,153,0.7)];
+  }
+  .risk-dot-yellow {
+    @apply risk-dot bg-risk-yellow shadow-[0_0_10px_rgba(251,191,36,0.7)];
+  }
+  .risk-dot-red {
+    @apply risk-dot bg-risk-red shadow-[0_0_10px_rgba(248,113,113,0.7)];
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== Holographic marine layer ===== */
+@layer components {
+  /* Panel with animated holo border + scanlines */
+  .holo-panel {
+    @apply relative rounded-card shadow-glass backdrop-blur-xl;
+    background:
+      linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01) 45%, rgba(255,255,255,0)) padding-box,
+      rgba(17, 40, 58, 0.6) padding-box,
+      conic-gradient(from var(--holo-angle, 0deg), rgba(45,224,190,0.55), rgba(45,224,190,0.05) 30%, rgba(94,160,255,0.35) 55%, rgba(45,224,190,0.05) 80%, rgba(45,224,190,0.55)) border-box;
+    border: 1px solid transparent;
+    animation: holo-rotate 7s linear infinite;
+  }
+  .holo-panel::after {
+    content: "";
+    @apply pointer-events-none absolute inset-0 rounded-card;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(45, 224, 190, 0.025) 0px,
+      rgba(45, 224, 190, 0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  }
+
+  .holo-grid {
+    background-image:
+      linear-gradient(rgba(45,224,190,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,224,190,0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(75% 60% at 50% 35%, black 30%, transparent 100%);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 14px rgba(45, 224, 190, 0.55);
+  }
+
+  /* Radar sweep (dashboard signature) */
+  .radar {
+    @apply relative overflow-hidden rounded-full border border-sonar/25;
+    background:
+      radial-gradient(circle, rgba(45,224,190,0.07) 0%, rgba(6,13,20,0.2) 70%),
+      repeating-radial-gradient(circle, transparent 0 23%, rgba(45,224,190,0.14) 23% 23.5%, transparent 23.5% 48%, rgba(45,224,190,0.14) 48% 48.5%, transparent 48.5% 73%, rgba(45,224,190,0.14) 73% 73.5%, transparent 73.5%);
+  }
+  .radar::before {
+    content: "";
+    @apply absolute inset-0;
+    background: conic-gradient(from 0deg, rgba(45,224,190,0.5), transparent 18%);
+    animation: radar-spin 4s linear infinite;
+  }
+  .radar::after {
+    content: "";
+    @apply absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sonar;
+    box-shadow: 0 0 12px rgba(45, 224, 190, 0.9);
+  }
+}
+
+@property --holo-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes holo-rotate {
+  to { --holo-angle: 360deg; }
+}
+@keyframes radar-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Dashboard v2 ===== */
+@layer components {
+  .caret::after {
+    content: "▍";
+    @apply text-sonar;
+    animation: caret-blink 1s steps(1) infinite;
+  }
+  .panel-title {
+    @apply flex items-center gap-2;
+  }
+  .tick {
+    stroke: rgba(233, 244, 246, 0.25);
+  }
+  .tick-major {
+    stroke: rgba(45, 224, 190, 0.5);
+  }
+}
+
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+@keyframes wave-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes blip-pulse {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}

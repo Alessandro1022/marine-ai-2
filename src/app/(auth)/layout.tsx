@@ -18,7 +18,7 @@ export default function AuthLayout({
           <Anchor size={20} strokeWidth={1.75} />
         </span>
         <span className="font-display text-lg font-semibold">
-          Empire Marine <span className="text-sonar">AI</span>
+          MARIVO <span className="text-sonar">AI</span>
         </span>
       </Link>
 

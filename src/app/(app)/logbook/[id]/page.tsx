@@ -122,7 +122,10 @@ export default function TripDetailPage() {
 
       {/* Trip summary card */}
       {trip ? (
-        <div className="absolute bottom-6 left-3 right-3 z-[999] rounded-xl border border-white/12 bg-deep/90 p-4 backdrop-blur">
+        <div
+          className="absolute left-3 right-3 z-[999] rounded-xl border border-white/12 bg-deep/90 p-4 backdrop-blur"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.5rem)" }}
+        >
           <p className="font-display text-sm font-semibold">
             {trip.start_location || "—"} → {trip.destination || "—"}
           </p>

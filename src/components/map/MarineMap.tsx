@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
@@ -75,6 +75,7 @@ export default function MarineMap() {
   const recordingSource = useTripRecordingStore((s) => s.source);
   const startManual = useTripRecordingStore((s) => s.startManual);
   const stopManual = useTripRecordingStore((s) => s.stopManual);
+  const livePath = useTripRecordingStore((s) => s.livePath);
 
   const [fix, setFix] = useState<LiveFix | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
@@ -242,6 +243,13 @@ export default function MarineMap() {
           : null}
 
         {store.showProtected && areas ? <ProtectedAreasLayer areas={areas} /> : null}
+
+        {isRecording && livePath.length > 1 ? (
+          <Polyline
+            positions={livePath}
+            pathOptions={{ color: "#2DE0BE", weight: 3, opacity: 0.85 }}
+          />
+        ) : null}
 
         <RouteLayer hits={hits} />
         <MeasureLayer />

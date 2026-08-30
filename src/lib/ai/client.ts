@@ -25,3 +25,24 @@ export async function sendChat(params: {
   }
   return (await res.json()) as ChatResponse;
 }
+
+// LEGACY SHIM — kept so callers not yet migrated to sendChat()/action-handling
+// still build. It can't actually execute client tools (start_trip, set_route,
+// etc.) since it has no store access, so an "action" response just becomes a
+// plain-text fallback message. Migrate each caller to sendChat() directly,
+// then delete this once nothing imports streamChat anymore.
+export async function streamChat(params: {
+  messages: ChatMsg[];
+  locale: string;
+  context?: string;
+  onChunk: (text: string) => void;
+  signal?: AbortSignal;
+}): Promise<string> {
+  const result = await sendChat(params);
+  const text =
+    result.type === "text"
+      ? result.text
+      : "Den här vyn stödjer inte AI-åtgärder än — öppna kartan för det.";
+  params.onChunk(text);
+  return text;
+}

@@ -28,14 +28,17 @@ import { MapControls } from "./MapControls";
 import type { Marina } from "@/types";
 
 // Free nautical chart sources:
-//  - Base (default): Carto Dark Matter — requires NEXT_PUBLIC_CARTO_API_KEY
+//  - Base (default): CARTO Dark Matter basemap — needs a basemap-specific key
+//    from https://carto.com/basemaps/apikey (NOT a Workspace/platform API key,
+//    those are for Builder/Data Warehouse and won't authenticate here).
+//    Param is `key=`, domain is tiles.basemaps.cartocdn.com.
 //  - Alt base: EMODnet bathymetry (official EU service, depth shading + contours)
 //  - Overlay: OpenSeaMap seamarks (buoys, lights, fairways)
 const CARTO_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY ?? "";
 
-const DARK_URL = `https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}${
+const DARK_URL = `https://tiles.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}${
   typeof window !== "undefined" && window.devicePixelRatio > 1 ? "@2x" : ""
-}.png?api_key=${CARTO_KEY}`;
+}.png?key=${CARTO_KEY}`;
 
 const EMODNET_URL =
   "https://tiles.emodnet-bathymetry.eu/2020/baselayer/web_mercator/{z}/{x}/{y}.png";
@@ -175,8 +178,8 @@ export default function MarineMap() {
         ref={mapRef}
       >
         {store.darkBase ? (
-          // Dark is now the default base layer (Carto Dark Matter, needs API key)
-          <TileLayer url={DARK_URL} />
+          // Dark is the default base layer (CARTO Dark Matter, needs basemap key)
+          <TileLayer url={DARK_URL} maxZoom={20} minZoom={0} />
         ) : (
           <TileLayer
             url={EMODNET_URL}

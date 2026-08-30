@@ -27,11 +27,19 @@ import { MapAIPanel } from "./MapAIPanel";
 import { MapControls } from "./MapControls";
 import type { Marina } from "@/types";
 
+// Free nautical chart sources:
+//  - Base (default): Carto Dark Matter — requires NEXT_PUBLIC_CARTO_API_KEY
+//  - Alt base: EMODnet bathymetry (official EU service, depth shading + contours)
+//  - Overlay: OpenSeaMap seamarks (buoys, lights, fairways)
+const CARTO_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY ?? "";
+
+const DARK_URL = `https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}${
+  typeof window !== "undefined" && window.devicePixelRatio > 1 ? "@2x" : ""
+}.png?api_key=${CARTO_KEY}`;
+
 const EMODNET_URL =
   "https://tiles.emodnet-bathymetry.eu/2020/baselayer/web_mercator/{z}/{x}/{y}.png";
 const SEAMARK_URL = "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png";
-const DARK_URL =
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 
 const marinaIcon = L.divIcon({
   className: "",
@@ -88,6 +96,7 @@ export default function MarineMap() {
   const lon = fix?.lon ?? geo.lon;
   const { data: weather } = useWeather(lat, lon);
 
+  // Route eco check
   const hits = useMemo(() => {
     if (!store.routeStart || !store.routeEnd || !areas) return [];
     return checkRouteAgainstAreas(
@@ -99,6 +108,7 @@ export default function MarineMap() {
     );
   }, [store.routeStart, store.routeEnd, areas]);
 
+  // Route stats chip
   const routeStats = useMemo(() => {
     if (!store.routeStart || !store.routeEnd || !weather) return null;
     return estimateRoute({
@@ -112,6 +122,7 @@ export default function MarineMap() {
     });
   }, [store.routeStart, store.routeEnd, weather, boat, fuelPrice]);
 
+  // AI chart context
   const chartContext = useMemo(() => {
     const map = mapRef.current;
     const bounds = map?.getBounds();
@@ -153,8 +164,8 @@ export default function MarineMap() {
   return (
     // fixed + inset-0 pulls the map out of normal flow entirely, so it sits
     // behind the app's top/bottom bars instead of inside a boxed panel.
-    // Those bars must be position:fixed/absolute with a transparent or
-    // blurred background for this to look right (see note below).
+    // BottomTabBar must be fixed/absolute with a transparent or blurred
+    // background for this to look right.
     <div className="fixed inset-0 z-0 overflow-hidden">
       <MapContainer
         center={[geo.lat, geo.lon]}
@@ -164,9 +175,17 @@ export default function MarineMap() {
         ref={mapRef}
       >
         {store.darkBase ? (
+          // Dark is now the default base layer (Carto Dark Matter, needs API key)
           <TileLayer url={DARK_URL} />
         ) : (
-          <TileLayer url={EMODNET_URL} maxNativeZoom={12} maxZoom={16} />
+          <TileLayer
+            url={EMODNET_URL}
+            maxNativeZoom={12}
+            maxZoom={12}
+            eventHandlers={{
+              tileerror: (e) => console.warn("EMODnet tile error", e),
+            }}
+          />
         )}
         {store.showSeamarks ? (
           <TileLayer url={SEAMARK_URL} maxZoom={18} />
@@ -223,6 +242,7 @@ export default function MarineMap() {
         </div>
       </div>
 
+      {/* AI button */}
       <button
         onClick={() => setAiOpen(true)}
         className="btn-primary absolute bottom-24 right-3 z-[999] !px-4 !py-2.5 text-xs"
@@ -239,8 +259,9 @@ export default function MarineMap() {
         />
       ) : null}
 
+      {/* Disclaimer + credits */}
       <p className="absolute bottom-16 left-1/2 z-[998] -translate-x-1/2 whitespace-nowrap text-[0.55rem] text-mist/60">
-        {t("chart.disclaimer")} · © EMODnet · OpenSeaMap
+        {t("chart.disclaimer")} · © CARTO · EMODnet · OpenSeaMap
       </p>
     </div>
   );

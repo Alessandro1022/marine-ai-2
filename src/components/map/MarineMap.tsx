@@ -25,6 +25,7 @@ import { RouteLayer } from "./RouteLayer";
 import { MeasureLayer } from "./MeasureLayer";
 import { LivePositionLayer, type LiveFix } from "./LivePositionLayer";
 import { MapAIPanel } from "./MapAIPanel";
+import { AisVesselsLayer } from "./AisVesselsLayer";
 import { MapControls } from "./MapControls";
 import type { Marina } from "@/types";
 
@@ -243,6 +244,7 @@ export default function MarineMap() {
           : null}
 
         {store.showProtected && areas ? <ProtectedAreasLayer areas={areas} /> : null}
+        {store.showAIS ? <AisVesselsLayer /> : null}
 
         {isRecording && livePath.length > 1 ? (
           <Polyline

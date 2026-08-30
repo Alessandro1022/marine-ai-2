@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -11,6 +12,7 @@ import type { Trip } from "@/types";
 
 export default function LogbookPage() {
   const t = useT();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
@@ -108,7 +110,11 @@ export default function LogbookPage() {
           <EmptyState text={t("logbook.noTrips")} />
         ) : (
           filtered.map((tr) => (
-            <div key={tr.id} className="glass-card p-4">
+            <button
+              key={tr.id}
+              onClick={() => router.push(`/logbook/${tr.id}`)}
+              className="glass-card w-full p-4 text-left transition-opacity active:opacity-70"
+            >
               <div className="flex items-center justify-between">
                 <p className="font-display text-sm font-semibold">
                   {tr.start_location} → {tr.destination}
@@ -121,7 +127,7 @@ export default function LogbookPage() {
                 {tr.fuel_used_liters ? ` · ${tr.fuel_used_liters} L` : ""}
               </p>
               {tr.notes ? <p className="mt-1.5 text-xs text-mist/80">{tr.notes}</p> : null}
-            </div>
+            </button>
           ))
         )}
       </div>

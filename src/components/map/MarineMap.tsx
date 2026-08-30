@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Circle, Square } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useWeather } from "@/hooks/useWeather";
@@ -19,6 +19,7 @@ import {
 import { haversineNm, formatEta, estimateRoute } from "@/lib/services/routeEngine";
 import { useBoatStore } from "@/stores/boatStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useTripRecordingStore } from "@/stores/tripRecordingStore";
 import { ProtectedAreasLayer } from "./ProtectedAreasLayer";
 import { RouteLayer } from "./RouteLayer";
 import { MeasureLayer } from "./MeasureLayer";
@@ -68,12 +69,30 @@ export default function MarineMap() {
   const boat = useBoatStore((s) => s.primaryBoat());
   const fuelPrice = useSettingsStore((s) => s.fuelPriceSek);
 
+  // Trip recording (auto-detect + manual override) — wired to LivePositionLayer below
+  const ingestFix = useTripRecordingStore((s) => s.ingestFix);
+  const isRecording = useTripRecordingStore((s) => s.isRecording);
+  const recordingSource = useTripRecordingStore((s) => s.source);
+  const startManual = useTripRecordingStore((s) => s.startManual);
+  const stopManual = useTripRecordingStore((s) => s.stopManual);
+
   const [fix, setFix] = useState<LiveFix | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [locateTick, setLocateTick] = useState(0);
   const mapRef = useRef<L.Map | null>(null);
 
-  const onFix = useCallback((f: LiveFix) => setFix(f), []);
+  const onFix = useCallback(
+    (f: LiveFix) => {
+      setFix(f);
+      if (boat?.id) {
+        ingestFix(
+          { lat: f.lat, lon: f.lon, sogKn: f.sogKn, cogDeg: f.cogDeg },
+          boat.id
+        );
+      }
+    },
+    [boat?.id, ingestFix]
+  );
 
   const { data: marinas } = useQuery({
     queryKey: ["marinas"],
@@ -164,6 +183,14 @@ export default function MarineMap() {
     store.setAnchor({ lat, lng: lon, radiusM: 40 });
   }
 
+  function toggleRecording() {
+    if (isRecording) {
+      void stopManual();
+    } else if (boat?.id) {
+      void startManual(boat.id);
+    }
+  }
+
   return (
     // fixed + inset-0 pulls the map out of normal flow entirely, so it sits
     // behind the app's top/bottom bars instead of inside a boxed panel.
@@ -244,6 +271,25 @@ export default function MarineMap() {
           ) : null}
         </div>
       </div>
+
+      {/* Recording indicator + manual start/stop — sits above the SOG/COG chip */}
+      <button
+        onClick={toggleRecording}
+        className={`absolute bottom-[7.5rem] left-3 z-[999] flex items-center gap-2 rounded-xl border px-3 py-2 backdrop-blur transition-colors ${
+          isRecording
+            ? "border-red-400/40 bg-red-500/20 text-red-100"
+            : "border-white/12 bg-deep/85 text-mist"
+        }`}
+      >
+        {isRecording ? <Square size={12} fill="currentColor" /> : <Circle size={12} fill="currentColor" />}
+        <span className="instrument-label !text-[0.65rem]">
+          {isRecording
+            ? recordingSource === "auto"
+              ? "Spelar in (auto)"
+              : "Spelar in"
+            : "Starta tur"}
+        </span>
+      </button>
 
       {/* AI button */}
       <button

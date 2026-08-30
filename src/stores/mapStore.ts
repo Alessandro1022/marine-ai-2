@@ -10,25 +10,21 @@ export interface LatLng {
 interface MapState {
   mode: MapMode;
   setMode: (m: MapMode) => void;
-
   // Layer toggles
   showSeamarks: boolean;
   showMarinas: boolean;
   showProtected: boolean;
   darkBase: boolean;
   toggle: (k: "showSeamarks" | "showMarinas" | "showProtected" | "darkBase") => void;
-
   // Route mode
   routeStart: LatLng | null;
   routeEnd: LatLng | null;
   setRoutePoint: (p: LatLng) => void;
   clearRoute: () => void;
-
   // Measure mode
   measurePoints: LatLng[];
   addMeasurePoint: (p: LatLng) => void;
   clearMeasure: () => void;
-
   // Anchor watch
   anchor: (LatLng & { radiusM: number }) | null;
   setAnchor: (a: (LatLng & { radiusM: number }) | null) => void;
@@ -37,13 +33,11 @@ interface MapState {
 export const useMapStore = create<MapState>((set, get) => ({
   mode: "explore",
   setMode: (mode) => set({ mode }),
-
   showSeamarks: true,
   showMarinas: true,
   showProtected: true,
-  darkBase: false,
+  darkBase: true, // dark is now the default base map
   toggle: (k) => set({ [k]: !get()[k] } as Partial<MapState>),
-
   routeStart: null,
   routeEnd: null,
   setRoutePoint: (p) => {
@@ -55,12 +49,10 @@ export const useMapStore = create<MapState>((set, get) => ({
     }
   },
   clearRoute: () => set({ routeStart: null, routeEnd: null }),
-
   measurePoints: [],
   addMeasurePoint: (p) =>
     set({ measurePoints: [...get().measurePoints, p].slice(-12) }),
   clearMeasure: () => set({ measurePoints: [] }),
-
   anchor: null,
   setAnchor: (anchor) => set({ anchor }),
 }));

@@ -52,12 +52,11 @@ async function execServerTool(
   return { error: "unknown_tool" };
 }
 
-// Groq uses the OpenAI-compatible chat completions format.
-// Model: llama-3.3-70b-versatile — solid tool-use support on Groq's free tier
-// as of when this was written. If Groq retires/renames it, check
-// console.groq.com/docs/models for the current tool-capable model list.
+// Model: openai/gpt-oss-120b — Groq's recommended replacement for
+// llama-3.3-70b-versatile, which was deprecated June 17, 2026.
+// Check console.groq.com/docs/models if this ever needs to change again.
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_MODEL = "openai/gpt-oss-120b";
 
 // Convert our shared {name, description, parameters} tool schema into
 // OpenAI/Groq's {type: "function", function: {...}} wrapper.

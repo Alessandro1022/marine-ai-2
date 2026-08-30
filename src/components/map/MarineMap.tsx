@@ -186,9 +186,16 @@ export default function MarineMap() {
   function toggleRecording() {
     if (isRecording) {
       void stopManual();
-    } else if (boat?.id) {
-      void startManual(boat.id);
+      return;
     }
+    if (!boat?.id) {
+      alert("Ingen båt kopplad till kontot ännu — lägg till en båt under Profil innan du kan starta en tur.");
+      return;
+    }
+    void startManual(boat.id).catch((err) => {
+      console.error("startManual failed", err);
+      alert("Kunde inte starta turen: " + (err?.message ?? "okänt fel"));
+    });
   }
 
   return (

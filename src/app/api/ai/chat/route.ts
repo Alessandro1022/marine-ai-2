@@ -52,8 +52,19 @@ async function execServerTool(
   return { error: "unknown_tool" };
 }
 
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
+// Groq uses the OpenAI-compatible chat completions format.
+// Model: llama-3.3-70b-versatile — solid tool-use support on Groq's free tier
+// as of when this was written. If Groq retires/renames it, check
+// console.groq.com/docs/models for the current tool-capable model list.
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+
+// Convert our shared {name, description, parameters} tool schema into
+// OpenAI/Groq's {type: "function", function: {...}} wrapper.
+const GROQ_TOOLS = AI_TOOL_DECLARATIONS.map((t) => ({
+  type: "function" as const,
+  function: t,
+}));
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,9 +74,9 @@ export async function POST(req: NextRequest) {
       context?: string;
     };
 
-    const key = process.env.GEMINI_API_KEY;
+    const key = process.env.GROQ_API_KEY;
     if (!key) {
-      return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
+      return NextResponse.json({ error: "GROQ_API_KEY not configured" }, { status: 500 });
     }
 
     const supabase = await createClient();
@@ -75,41 +86,52 @@ export async function POST(req: NextRequest) {
 
     const system = systemPrompt(locale, context);
 
-    // Gemini "contents" array we mutate as we loop through tool calls.
-    const contents: any[] = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    // OpenAI-format message list we mutate as we loop through tool calls.
+    const chatMessages: any[] = [
+      { role: "system", content: system },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ];
 
     const MAX_TOOL_ROUNDS = 4;
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const res = await fetch(GEMINI_URL + key, {
+      const res = await fetch(GROQ_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents,
-          tools: [{ functionDeclarations: AI_TOOL_DECLARATIONS }],
-          generationConfig: { temperature: 0.6, maxOutputTokens: 1024 },
+          model: GROQ_MODEL,
+          messages: chatMessages,
+          tools: GROQ_TOOLS,
+          tool_choice: "auto",
+          temperature: 0.6,
+          max_tokens: 1024,
         }),
       });
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error("Gemini API error:", errText);
-        return NextResponse.json({ error: `Gemini API error: ${res.status}` }, { status: 500 });
+        console.error("Groq API error:", errText);
+        return NextResponse.json({ error: `Groq API error: ${res.status}` }, { status: 500 });
       }
 
       const data = await res.json();
-      const parts = data?.candidates?.[0]?.content?.parts ?? [];
-      const functionCallPart = parts.find((p: any) => p.functionCall);
+      const message = data?.choices?.[0]?.message;
+      const toolCall = message?.tool_calls?.[0];
 
-      if (!functionCallPart) {
-        const text = parts.find((p: any) => p.text)?.text ?? "";
+      if (!toolCall) {
+        const text = message?.content ?? "";
         return NextResponse.json({ type: "text", text });
       }
 
-      const { name, args } = functionCallPart.functionCall;
+      const name = toolCall.function?.name;
+      let args: Record<string, unknown> = {};
+      try {
+        args = JSON.parse(toolCall.function?.arguments ?? "{}");
+      } catch {
+        args = {};
+      }
 
       if (CLIENT_TOOL_NAMES.has(name)) {
         // Can't execute this here — hand it back to the browser.
@@ -124,13 +146,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ type: "text", text: "Du måste vara inloggad för det." });
       }
 
-      const result = await execServerTool(name, args ?? {}, supabase, user.id);
+      const result = await execServerTool(name, args, supabase, user.id);
 
-      // Feed the tool result back and loop again so Gemini can phrase the final answer.
-      contents.push({ role: "model", parts: [{ functionCall: { name, args } }] });
-      contents.push({
-        role: "function",
-        parts: [{ functionResponse: { name, response: result } }],
+      // Feed the tool result back and loop again so the model can phrase the final answer.
+      chatMessages.push(message); // the assistant turn that requested the tool call
+      chatMessages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(result),
       });
     }
 

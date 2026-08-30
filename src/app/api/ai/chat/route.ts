@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server"; // ASSUMPTION: server-side Supabase client using next/headers cookies — confirm this path exists
+import { createClient } from "@/lib/supabase/server";
 import { AI_TOOL_DECLARATIONS, SERVER_TOOL_NAMES, CLIENT_TOOL_NAMES } from "@/lib/ai/tools";
 
 export const runtime = "nodejs";
@@ -52,18 +52,36 @@ async function execServerTool(
   return { error: "unknown_tool" };
 }
 
-// Model: openai/gpt-oss-120b — Groq's recommended replacement for
-// llama-3.3-70b-versatile, which was deprecated June 17, 2026.
-// Check console.groq.com/docs/models if this ever needs to change again.
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "openai/gpt-oss-120b";
 
-// Convert our shared {name, description, parameters} tool schema into
-// OpenAI/Groq's {type: "function", function: {...}} wrapper.
 const GROQ_TOOLS = AI_TOOL_DECLARATIONS.map((t) => ({
   type: "function" as const,
   function: t,
 }));
+
+// Turns a resolved text answer into a slow-revealed plain-text stream so the
+// UI can show it word by word, ChatGPT-style. This is NOT real token
+// streaming from Groq — the full answer is already known by this point,
+// because we need it complete to have decided it wasn't a tool call. Real
+// mid-generation streaming would require re-architecting the tool-call loop
+// to parse streamed function-call deltas, which is a bigger change than this
+// pass covers.
+function revealStream(text: string) {
+  const words = text.split(/(\s+)/); // keep whitespace tokens so spacing is preserved
+  let i = 0;
+  return new ReadableStream({
+    async pull(controller) {
+      if (i >= words.length) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(new TextEncoder().encode(words[i]));
+      i++;
+      await new Promise((r) => setTimeout(r, 18));
+    },
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -85,7 +103,6 @@ export async function POST(req: NextRequest) {
 
     const system = systemPrompt(locale, context);
 
-    // OpenAI-format message list we mutate as we loop through tool calls.
     const chatMessages: any[] = [
       { role: "system", content: system },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -121,7 +138,11 @@ export async function POST(req: NextRequest) {
 
       if (!toolCall) {
         const text = message?.content ?? "";
-        return NextResponse.json({ type: "text", text });
+        // Stream the final text answer back word by word.
+        return new NextResponse(revealStream(text), {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
       }
 
       const name = toolCall.function?.name;
@@ -133,7 +154,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (CLIENT_TOOL_NAMES.has(name)) {
-        // Can't execute this here — hand it back to the browser.
+        // Actions are small and immediate — no need to stream these.
         return NextResponse.json({ type: "action", tool: name, args });
       }
 
@@ -147,8 +168,7 @@ export async function POST(req: NextRequest) {
 
       const result = await execServerTool(name, args, supabase, user.id);
 
-      // Feed the tool result back and loop again so the model can phrase the final answer.
-      chatMessages.push(message); // the assistant turn that requested the tool call
+      chatMessages.push(message);
       chatMessages.push({
         role: "tool",
         tool_call_id: toolCall.id,

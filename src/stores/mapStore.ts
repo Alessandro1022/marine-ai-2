@@ -14,8 +14,9 @@ interface MapState {
   showSeamarks: boolean;
   showMarinas: boolean;
   showProtected: boolean;
+  showAIS: boolean;
   darkBase: boolean;
-  toggle: (k: "showSeamarks" | "showMarinas" | "showProtected" | "darkBase") => void;
+  toggle: (k: "showSeamarks" | "showMarinas" | "showProtected" | "showAIS" | "darkBase") => void;
   // Route mode
   routeStart: LatLng | null;
   routeEnd: LatLng | null;
@@ -36,6 +37,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   showSeamarks: true,
   showMarinas: true,
   showProtected: true,
+  showAIS: true,
   darkBase: true, // dark is now the default base map
   toggle: (k) => set({ [k]: !get()[k] } as Partial<MapState>),
   routeStart: null,

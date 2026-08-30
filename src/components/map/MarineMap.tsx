@@ -27,9 +27,6 @@ import { MapAIPanel } from "./MapAIPanel";
 import { MapControls } from "./MapControls";
 import type { Marina } from "@/types";
 
-// Free nautical chart sources:
-//  - Base: EMODnet bathymetry (official EU service, depth shading + contours)
-//  - Overlay: OpenSeaMap seamarks (buoys, lights, fairways)
 const EMODNET_URL =
   "https://tiles.emodnet-bathymetry.eu/2020/baselayer/web_mercator/{z}/{x}/{y}.png";
 const SEAMARK_URL = "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png";
@@ -91,7 +88,6 @@ export default function MarineMap() {
   const lon = fix?.lon ?? geo.lon;
   const { data: weather } = useWeather(lat, lon);
 
-  // Route eco check
   const hits = useMemo(() => {
     if (!store.routeStart || !store.routeEnd || !areas) return [];
     return checkRouteAgainstAreas(
@@ -103,7 +99,6 @@ export default function MarineMap() {
     );
   }, [store.routeStart, store.routeEnd, areas]);
 
-  // Route stats chip
   const routeStats = useMemo(() => {
     if (!store.routeStart || !store.routeEnd || !weather) return null;
     return estimateRoute({
@@ -117,7 +112,6 @@ export default function MarineMap() {
     });
   }, [store.routeStart, store.routeEnd, weather, boat, fuelPrice]);
 
-  // AI chart context
   const chartContext = useMemo(() => {
     const map = mapRef.current;
     const bounds = map?.getBounds();
@@ -157,14 +151,15 @@ export default function MarineMap() {
   }
 
   return (
-    <div
-      className="holo-panel relative overflow-hidden"
-      style={{ height: "calc(100dvh - 11.5rem)" }}
-    >
+    // fixed + inset-0 pulls the map out of normal flow entirely, so it sits
+    // behind the app's top/bottom bars instead of inside a boxed panel.
+    // Those bars must be position:fixed/absolute with a transparent or
+    // blurred background for this to look right (see note below).
+    <div className="fixed inset-0 z-0 overflow-hidden">
       <MapContainer
         center={[geo.lat, geo.lon]}
         zoom={9}
-        style={{ height: "100%", width: "100%", background: "#0B1A26" }}
+        style={{ height: "100dvh", width: "100vw", background: "#0B1A26" }}
         attributionControl={false}
         ref={mapRef}
       >
@@ -200,8 +195,8 @@ export default function MarineMap() {
 
       <MapControls onLocate={locate} onSetAnchorHere={setAnchorHere} />
 
-      {/* SOG/COG instrument chip */}
-      <div className="absolute bottom-3 left-3 z-[999] rounded-xl border border-white/12 bg-deep/85 px-3 py-2 backdrop-blur">
+      {/* SOG/COG instrument chip — pushed up so it clears a floating bottom nav */}
+      <div className="absolute bottom-24 left-3 z-[999] rounded-xl border border-white/12 bg-deep/85 px-3 py-2 backdrop-blur">
         <div className="flex gap-4">
           <div>
             <p className="instrument text-base text-sonar glow-text">
@@ -228,10 +223,9 @@ export default function MarineMap() {
         </div>
       </div>
 
-      {/* AI button */}
       <button
         onClick={() => setAiOpen(true)}
-        className="btn-primary absolute bottom-3 right-3 z-[999] !px-4 !py-2.5 text-xs"
+        className="btn-primary absolute bottom-24 right-3 z-[999] !px-4 !py-2.5 text-xs"
       >
         <Sparkles size={14} /> AI
       </button>
@@ -245,8 +239,7 @@ export default function MarineMap() {
         />
       ) : null}
 
-      {/* Disclaimer + credits */}
-      <p className="absolute bottom-0 left-1/2 z-[998] -translate-x-1/2 whitespace-nowrap pb-0.5 text-[0.55rem] text-mist/60">
+      <p className="absolute bottom-16 left-1/2 z-[998] -translate-x-1/2 whitespace-nowrap text-[0.55rem] text-mist/60">
         {t("chart.disclaimer")} · © EMODnet · OpenSeaMap
       </p>
     </div>

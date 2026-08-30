@@ -28,6 +28,7 @@ interface TripRecordingState {
   pointBuffer: PendingPoint[];
   distanceNm: number;
   lastPoint: PendingPoint | null;
+  livePath: [number, number][]; // full route of the *current* trip, for drawing a live line
 
   // internal hysteresis timers — epoch ms of when the condition first became true
   aboveStartThresholdSince: number | null;
@@ -56,7 +57,7 @@ async function createTripRow(boatId: string, source: "manual" | "auto") {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) throw new Error("Ingen inloggad användare hittades");
 
   const nowIso = new Date().toISOString();
   const { data, error } = await supabase
@@ -74,8 +75,8 @@ async function createTripRow(boatId: string, source: "manual" | "auto") {
     .single();
 
   if (error || !data) {
-    console.warn("Failed to create trip row", error);
-    return null;
+    console.error("Failed to create trip row", error);
+    throw new Error(error?.message ?? "Kunde inte skapa tur-rad i databasen");
   }
   return data.id as string;
 }
@@ -124,13 +125,13 @@ export const useTripRecordingStore = create<TripRecordingState>((set, get) => ({
   pointBuffer: [],
   distanceNm: 0,
   lastPoint: null,
+  livePath: [],
   aboveStartThresholdSince: null,
   belowStopThresholdSince: null,
 
   startManual: async (boatId) => {
     if (get().isRecording) return;
-    const tripId = await createTripRow(boatId, "manual");
-    if (!tripId) return;
+    const tripId = await createTripRow(boatId, "manual"); // throws on failure
     set({
       isRecording: true,
       source: "manual",
@@ -140,6 +141,7 @@ export const useTripRecordingStore = create<TripRecordingState>((set, get) => ({
       pointBuffer: [],
       distanceNm: 0,
       lastPoint: null,
+      livePath: [],
       aboveStartThresholdSince: null,
       belowStopThresholdSince: null,
     });
@@ -159,6 +161,7 @@ export const useTripRecordingStore = create<TripRecordingState>((set, get) => ({
       pointBuffer: [],
       distanceNm: 0,
       lastPoint: null,
+      livePath: [],
       aboveStartThresholdSince: null,
       belowStopThresholdSince: null,
     });
@@ -190,6 +193,7 @@ export const useTripRecordingStore = create<TripRecordingState>((set, get) => ({
               pointBuffer: [],
               distanceNm: 0,
               lastPoint: null,
+              livePath: [],
             });
           })();
         }
@@ -215,6 +219,7 @@ export const useTripRecordingStore = create<TripRecordingState>((set, get) => ({
         newBuffer.length >= FLUSH_EVERY_N_POINTS ? [] : newBuffer,
       lastPoint: point,
       distanceNm: state.distanceNm + addedDistance,
+      livePath: [...state.livePath, [point.lat, point.lon]],
     });
 
     if (newBuffer.length >= FLUSH_EVERY_N_POINTS && state.tripId) {

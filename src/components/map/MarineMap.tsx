@@ -26,6 +26,7 @@ import { MeasureLayer } from "./MeasureLayer";
 import { LivePositionLayer, type LiveFix } from "./LivePositionLayer";
 import { MapAIPanel } from "./MapAIPanel";
 import { AisVesselsLayer } from "./AisVesselsLayer";
+import { createOfflineTileLayer } from "@/lib/offlineTiles";
 import { MapControls } from "./MapControls";
 import type { Marina } from "@/types";
 
@@ -60,6 +61,21 @@ function FlyTo({ trigger, lat, lon }: { trigger: number; lat: number; lon: numbe
     lastRef.current = trigger;
     map.flyTo([lat, lon], Math.max(map.getZoom(), 11), { duration: 0.8 });
   }
+  return null;
+}
+
+// react-leaflet has no built-in wrapper for a custom TileLayer subclass, so
+// this mounts createOfflineTileLayer() imperatively via the map instance.
+function OfflineDarkTileLayer({ url }: { url: string }) {
+  const map = useMap();
+  useEffect(() => {
+    const layer = createOfflineTileLayer(url, { maxZoom: 20, minZoom: 0 });
+    layer.addTo(map);
+    return () => {
+      map.removeLayer(layer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url]);
   return null;
 }
 
@@ -214,8 +230,10 @@ export default function MarineMap() {
         ref={mapRef}
       >
         {store.darkBase ? (
-          // Dark is the default base layer (CARTO Dark Matter, needs basemap key)
-          <TileLayer url={DARK_URL} maxZoom={20} minZoom={0} />
+          // Dark is the default base layer (CARTO Dark Matter, needs basemap key).
+          // Wrapped with offline tile caching — tiles you've panned over stay
+          // available with no connection.
+          <OfflineDarkTileLayer url={DARK_URL} />
         ) : (
           <TileLayer
             url={EMODNET_URL}

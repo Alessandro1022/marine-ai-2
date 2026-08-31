@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Empire Marine AI",
+    title: "MARIVO",
   },
 };
 

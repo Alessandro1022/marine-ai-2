@@ -26,9 +26,9 @@ export default function WelcomePage() {
           <Anchor size={28} strokeWidth={1.75} />
         </div>
         <h1 className="mt-6 font-display text-4xl font-semibold leading-tight">
-          Empire
+          MARIVO
           <br />
-          Marine <span className="text-sonar">AI</span>
+              <span className="text-sonar">AI</span>
         </h1>
         <p className="mt-3 text-mist">{t("auth.welcomeSubtitle")}</p>
       </div>

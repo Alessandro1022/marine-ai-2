@@ -60,14 +60,17 @@ export default function OnboardingPage() {
       cruise_speed_knots: boat.cruiseSpeed ? Number(boat.cruiseSpeed) : null,
       is_primary: true,
     });
-    await supabase
-      .from("profiles")
-      .update({
-        language: locale,
-        subscription_plan: plan,
-        onboarding_completed: true,
-      })
-      .eq("id", user.id);
+    // upsert (not update): if no profiles row exists yet for this user
+    // (e.g. the create-profile trigger never ran, or ran but this row was
+    // never inserted), a plain .update() silently affects 0 rows and
+    // onboarding_completed never actually gets persisted — which is what
+    // was causing onboarding to loop and the profile page to show blanks.
+    await supabase.from("profiles").upsert({
+      id: user.id,
+      language: locale,
+      subscription_plan: plan,
+      onboarding_completed: true,
+    });
     await supabase.from("settings").upsert({ user_id: user.id });
     router.push("/dashboard");
   }
